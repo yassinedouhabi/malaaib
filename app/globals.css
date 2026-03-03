@@ -7,7 +7,8 @@
 
   /* Brand colors */
   --color-brand-green: #16a34a;
-  --color-brand-green-light: #bbf7d0;
+  --color-brand-green-dark: #15803d;
+  --color-brand-green-surface: #f0fdf4;
   --color-brand-yellow: #ca8a04;
   --color-brand-red: #dc2626;
   --color-brand-blue: #2563eb;
@@ -32,7 +33,6 @@ body {
   font-family: var(--font-arabic), var(--font-latin), sans-serif;
 }
 
-/* RTL-aware utilities */
 [lang="ar"] body,
 [dir="rtl"] body {
   font-family: var(--font-arabic), sans-serif;
@@ -41,4 +41,18 @@ body {
 [lang="fr"] body,
 [dir="ltr"] body {
   font-family: var(--font-latin), sans-serif;
+}
+
+/* Scrollbar hide */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area bottom for floating nav */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }

@@ -98,3 +98,9 @@ export interface FieldPhoto {
   is_cover: boolean
   sort_order: number
 }
+
+export interface TimeSlot {
+  start_time: string   // "08:00"
+  end_time: string     // "09:00"
+  is_available: boolean
+}
