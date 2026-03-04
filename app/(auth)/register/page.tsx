@@ -1,30 +1,17 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 const ROLE_HOME: Record<string, string> = {
   player: '/fields',
   owner: '/dashboard',
-  admin: '/admin/dashboard',
 }
 
-const OTP_TTL     = 180  // seconds
-const RESEND_WAIT = 30   // seconds
-
-// Normalize: 07XXXXXXXX / 06XXXXXXXX → +212XXXXXXXXX
-function normalizePhone(raw: string) {
-  const d = raw.trim().replace(/\s+/g, '')
-  if (d.startsWith('0') && d.length === 10) return '+212' + d.slice(1)
-  return d
-}
-
-// Basic E.164 Moroccan validation
-function isValidPhone(phone: string) {
-  return /^\+212[67]\d{8}$/.test(phone)
-}
+const OTP_TTL     = 180
+const RESEND_WAIT = 30
 
 function formatTime(secs: number) {
   const m = Math.floor(secs / 60).toString().padStart(2, '0')
@@ -32,22 +19,21 @@ function formatTime(secs: number) {
   return `${m}:${s}`
 }
 
-type Step = 'phone' | 'otp'
+type Step = 'details' | 'otp'
 
-export default function LoginPage() {
-  const router = useRouter()
+function RegisterForm() {
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const phone        = searchParams.get('phone') ?? ''
 
-  const [phone, setPhone]         = useState('')
-  const [phoneErr, setPhoneErr]   = useState('')
-  const [otp, setOtp]             = useState('')
-  const [step, setStep]           = useState<Step>('phone')
-  const [loading, setLoading]     = useState(false)
+  const [name, setName]   = useState('')
+  const [role, setRole]   = useState<'player' | 'owner'>('player')
+  const [otp, setOtp]     = useState('')
+  const [step, setStep]   = useState<Step>('details')
+  const [loading, setLoading] = useState(false)
 
-  // Cooldown before resend (30s)
   const [resendCooldown, setResendCooldown] = useState(0)
-  // OTP expiry countdown (180s)
   const [otpExpiry, setOtpExpiry]           = useState(0)
-  // Rate-limit lock countdown
   const [lockTimer, setLockTimer]           = useState(0)
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -82,24 +68,25 @@ export default function LoginPage() {
 
   useEffect(() => () => clearTimer(), [])
 
-  // Step 1: validate format → check DB → send OTP
-  async function handlePhoneSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const normalized = normalizePhone(phone)
+  // Redirect to login if no phone in URL
+  useEffect(() => {
+    if (!phone) router.replace('/login')
+  }, [phone, router])
 
-    if (!isValidPhone(normalized)) {
-      setPhoneErr('أدخل رقم هاتف مغربي صحيح')
-      return
-    }
-    setPhoneErr('')
+  // Step 1: validate details → check phone uniqueness → send OTP
+  async function handleDetails(e: React.FormEvent) {
+    e.preventDefault()
+    if (!phone) return
     setLoading(true)
 
-    // Check if user exists
-    const checkRes = await fetch(`/api/auth/check-phone?phone=${encodeURIComponent(normalized)}`)
+    // Check phone is not already registered
+    const checkRes = await fetch(`/api/auth/check-phone?phone=${encodeURIComponent(phone)}`)
     const { exists } = await checkRes.json()
 
-    if (!exists) {
-      router.push(`/register?phone=${encodeURIComponent(normalized)}`)
+    if (exists) {
+      setLoading(false)
+      toast.error('هذا الرقم مسجل بالفعل')
+      setTimeout(() => router.push('/login'), 1500)
       return
     }
 
@@ -107,7 +94,7 @@ export default function LoginPage() {
     const res = await fetch('/api/auth/send-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: normalized }),
+      body: JSON.stringify({ phone }),
     })
     const json = await res.json()
     setLoading(false)
@@ -115,7 +102,7 @@ export default function LoginPage() {
     if (!res.ok) {
       if (json.error === 'rate_limited') {
         startLockTimer(json.seconds_left)
-        toast.error(`تم تجاوز الحد المسموح. انتظر ${formatTime(json.seconds_left)}`)
+        toast.error(`انتظر ${formatTime(json.seconds_left)} قبل المحاولة مجدداً`)
       } else {
         toast.error(json.error ?? 'فشل إرسال الرمز')
       }
@@ -123,12 +110,10 @@ export default function LoginPage() {
     }
 
     toast.success('تم إرسال رمز التحقق')
-    setPhone(normalized)
     setStep('otp')
     startResendCooldown()
   }
 
-  // Resend OTP
   async function resendOtp() {
     if (resendCooldown > 0 || loading) return
     setLoading(true)
@@ -144,7 +129,7 @@ export default function LoginPage() {
     if (!res.ok) {
       if (json.error === 'rate_limited') {
         startLockTimer(json.seconds_left)
-        toast.error(`انتظر ${formatTime(json.seconds_left)} قبل المحاولة مجدداً`)
+        toast.error(`انتظر ${formatTime(json.seconds_left)}`)
       } else {
         toast.error(json.error ?? 'فشل إعادة الإرسال')
       }
@@ -155,8 +140,8 @@ export default function LoginPage() {
     startResendCooldown()
   }
 
-  // Step 2: verify OTP → create session → redirect
-  async function handleOtpSubmit(e: React.FormEvent) {
+  // Step 2: verify OTP → create session → save profile → redirect
+  async function handleOtp(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
 
@@ -171,7 +156,7 @@ export default function LoginPage() {
       setLoading(false)
       if (json.error === 'expired') {
         toast.error('انتهت صلاحية الرمز، أعد الإرسال')
-        setStep('phone')
+        setStep('details')
       } else if (json.error === 'locked') {
         toast.error('تم تجاوز عدد المحاولات المسموح')
       } else if (json.error === 'invalid_otp') {
@@ -196,62 +181,92 @@ export default function LoginPage() {
       return
     }
 
-    // Get role and redirect
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', sessionData.user.id)
-      .single()
+    // Save profile
+    const { error: profileErr } = await supabase.from('users').upsert({
+      id: sessionData.user.id,
+      phone,
+      name: name.trim(),
+      role,
+    })
 
-    const dest = profile?.role ? (ROLE_HOME[profile.role] ?? '/fields') : '/fields'
-    toast.success('مرحباً بك!')
-    router.push(dest)
+    if (profileErr) {
+      toast.error('فشل حفظ البيانات')
+      setLoading(false)
+      return
+    }
+
+    toast.success('مرحباً! تم إنشاء حسابك بنجاح')
+    router.push(ROLE_HOME[role])
     router.refresh()
   }
+
+  if (!phone) return null
 
   return (
     <div className="w-full max-w-sm">
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-green-600 tracking-wide">ملاعب</h1>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">احجز ملعبك الآن</p>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">إنشاء حساب جديد</p>
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 space-y-6">
-        {step === 'phone' ? (
+        {step === 'details' ? (
           <>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">تسجيل الدخول</h2>
-            <form onSubmit={handlePhoneSubmit} className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">أكمل بياناتك</h2>
+              <p className="mt-1 text-sm text-gray-400" dir="ltr">{phone}</p>
+            </div>
+
+            {lockTimer > 0 && (
+              <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 text-center">
+                انتظر <span className="font-mono font-bold">{formatTime(lockTimer)}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleDetails} className="space-y-4">
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  رقم الهاتف
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  الاسم الكامل
                 </label>
                 <input
-                  id="phone"
-                  type="tel"
-                  dir="ltr"
-                  placeholder="+212 6XX XXX XXX أو 06/07XX XXX XXX"
-                  value={phone}
-                  onChange={e => { setPhone(e.target.value); setPhoneErr('') }}
-                  className={`w-full rounded-xl border bg-gray-50 dark:bg-slate-700 px-4 py-3 text-base text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition ${
-                    phoneErr ? 'border-red-400' : 'border-gray-200 dark:border-slate-600'
-                  }`}
+                  id="name"
+                  type="text"
+                  placeholder="أدخل اسمك"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 px-4 py-3 text-base text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
                   required
                 />
-                {phoneErr && <p className="mt-1 text-xs text-red-500">{phoneErr}</p>}
               </div>
 
-              {lockTimer > 0 && (
-                <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 text-center">
-                  انتظر <span className="font-mono font-bold">{formatTime(lockTimer)}</span> قبل المحاولة
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  نوع الحساب
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {(['player', 'owner'] as const).map(r => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRole(r)}
+                      className={`rounded-xl border-2 py-3 text-sm font-semibold transition-all ${
+                        role === r
+                          ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                          : 'border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400 hover:border-green-300'
+                      }`}
+                    >
+                      {r === 'player' ? '⚽ لاعب' : '🏟️ صاحب ملعب'}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
 
               <button
                 type="submit"
-                disabled={loading || lockTimer > 0}
+                disabled={loading || !name.trim() || lockTimer > 0}
                 className="w-full rounded-xl bg-green-600 py-3 text-base font-semibold text-white hover:bg-green-700 disabled:opacity-50 active:scale-[0.98] transition-all"
               >
-                {loading ? 'جار التحقق…' : 'متابعة'}
+                {loading ? 'جار الإرسال…' : 'إرسال رمز التحقق'}
               </button>
             </form>
           </>
@@ -259,18 +274,17 @@ export default function LoginPage() {
           <>
             <div>
               <button
-                onClick={() => { setStep('phone'); setOtp(''); clearTimer() }}
+                onClick={() => { setStep('details'); setOtp(''); clearTimer() }}
                 className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-3 flex items-center gap-1"
               >
-                ← <span dir="ltr">{phone}</span>
+                ← رجوع
               </button>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">أدخل رمز التحقق</h2>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                تم إرسال رمز 6 أرقام إلى هاتفك
+                تم إرسال الرمز إلى <span dir="ltr">{phone}</span>
               </p>
             </div>
 
-            {/* OTP expiry countdown */}
             {otpExpiry > 0 && (
               <div className={`text-center text-sm font-mono ${otpExpiry <= 30 ? 'text-red-500' : 'text-gray-400'}`}>
                 ينتهي الرمز بعد {formatTime(otpExpiry)}
@@ -280,7 +294,7 @@ export default function LoginPage() {
               <div className="text-center text-sm text-red-500">انتهت صلاحية الرمز</div>
             )}
 
-            <form onSubmit={handleOtpSubmit} className="space-y-4">
+            <form onSubmit={handleOtp} className="space-y-4">
               <input
                 type="text"
                 inputMode="numeric"
@@ -297,9 +311,8 @@ export default function LoginPage() {
                 disabled={loading || otp.length !== 6}
                 className="w-full rounded-xl bg-green-600 py-3 text-base font-semibold text-white hover:bg-green-700 disabled:opacity-50 active:scale-[0.98] transition-all"
               >
-                {loading ? 'جار التحقق…' : 'دخول'}
+                {loading ? 'جار التحقق…' : 'تأكيد وإنشاء الحساب'}
               </button>
-
               <button
                 type="button"
                 disabled={resendCooldown > 0 || loading}
@@ -315,5 +328,13 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   )
 }

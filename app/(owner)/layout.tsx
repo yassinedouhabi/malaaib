@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, ClipboardList, CalendarDays, Settings } from 'lucide-react'
+import { LogoutButton } from '@/components/ui/logout-button'
 
 const NAV_ITEMS = [
   { href: '/dashboard',    label: 'لوحة التحكم', Icon: LayoutDashboard },
@@ -52,15 +53,14 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Role badge */}
-        <div className="p-3 border-t border-gray-100 dark:border-slate-800/80 flex-shrink-0">
+        {/* Role badge + logout */}
+        <div className="p-3 border-t border-gray-100 dark:border-slate-800/80 flex-shrink-0 space-y-1">
           <div className="hidden lg:block px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-800/40">
             <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-0.5">الوضعية</p>
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">صاحب ملعب</p>
           </div>
-          <div className="lg:hidden flex justify-center">
-            <div className="w-2 h-2 rounded-full bg-brand-green" />
-          </div>
+          <LogoutButton showLabel className="w-full hidden lg:flex" />
+          <LogoutButton className="w-full lg:hidden justify-center" />
         </div>
       </aside>
 

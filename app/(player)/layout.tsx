@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MapPin, Heart, ClipboardList, Settings } from 'lucide-react'
+import { MapPin, Heart, ClipboardList } from 'lucide-react'
+import { LogoutButton } from '@/components/ui/logout-button'
 
 const NAV_ITEMS = [
   { href: '/fields', label: 'الملاعب', Icon: MapPin },
@@ -55,12 +56,10 @@ export default function PlayerLayout({ children }: { children: React.ReactNode }
           })}
         </nav>
 
-        {/* Bottom settings stub */}
+        {/* Logout */}
         <div className="p-2 border-t border-gray-100 dark:border-slate-800/80 flex-shrink-0">
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-800/60 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-150">
-            <Settings className="w-5 h-5 flex-shrink-0" strokeWidth={1.5} />
-            <span className="hidden lg:block text-sm">الإعدادات</span>
-          </button>
+          <LogoutButton showLabel className="w-full hidden lg:flex" />
+          <LogoutButton className="w-full lg:hidden justify-center" />
         </div>
       </aside>
 
