@@ -20,10 +20,10 @@ Establish the base frontend architecture.
 
 ### Install Core Libraries
 
-- [ ] Install `lucide-react`
-- [ ] Install `react-hook-form`
-- [ ] Install `zustand`
-- [ ] Install `framer-motion`
+- [x] Install `lucide-react`
+- [x] Install `react-hook-form`
+- [x] Install `zustand`
+- [x] Install `framer-motion`
 
 ### Fonts Setup
 
