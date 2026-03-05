@@ -1,20 +1,29 @@
-import { IBM_Plex_Sans_Arabic, IBM_Plex_Mono, Geist } from "next/font/google";
+import { Metadata } from "next";
 import "./globals.css";
+import { IBM_Plex_Sans_Arabic, IBM_Plex_Mono, Geist } from "next/font/google";
 
-const ibmArabic = IBM_Plex_Sans_Arabic({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["arabic"],
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: "--font-latin",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const ibmMono = IBM_Plex_Mono({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
+const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
+  variable: "--font-arabic",
+  subsets: ["arabic"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 const geist = Geist({
+  variable: "--font-geist",
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
 });
+
+export const metadata: Metadata = {
+  title: "ملاعب | Malaaib",
+  description: "احجز ملعبك الآن — Réservez votre terrain maintenant",
+};
 
 export default function RootLayout({
   children,
@@ -23,7 +32,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={`antialiased  ${ibmArabic.className}`}>{children}</body>
+      <body
+        className={`${geist.variable} ${ibmPlexMono.variable} ${ibmPlexSansArabic.variable} antialiased font-arabic`}
+      >
+        {children}
+      </body>
     </html>
   );
 }

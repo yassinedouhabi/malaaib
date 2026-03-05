@@ -34,12 +34,12 @@ Establish the base frontend architecture.
 
 ### RTL Configuration
 
-- [ ] Set `<html lang="ar" dir="rtl">`
-- [ ] Test RTL layout rendering
+- [x] Set `<html lang="ar" dir="rtl">`
+- [x] Test RTL layout rendering
 
 ### Folder Structure
 
-- [ ] Create folders:
+- [x] Create folders:
 
 ```
 app/
@@ -55,11 +55,11 @@ lib/
 
 ### Base Files
 
-- [ ] Create `lib/mock-data.ts`
-- [ ] Create `components/ui` folder
-- [ ] Setup base `layout.tsx`
-- [ ] Setup global styles
-- [ ] Add spacing scale
+- [x] Create `lib/mock-data.ts`
+- [x] Create `components/ui` folder
+- [x] Setup base `layout.tsx`
+- [x] Setup global styles
+- [x] Add spacing scale
 
 ---
 

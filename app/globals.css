@@ -1,22 +1,53 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme inline {
+  /* Fonts */
+  --font-arabic: var(--font-arabic);
+  --font-latin: var(--font-latin);
+
+  /* Brand colors */
+  --green: #16a34a;
+  --green-dim: #bbf7d0;
+  --green-deep: #052e16;
+  --ink: #0c0c0c;
+  --ink-2: #3a3a3a;
+  --soft: #f0f2f0;
+  --white: #ffffff;
+  --border: #e2e6e2;
+  --muted: #8f9490;
+
+  /* glass */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.75);
+  --glass-blur: blur(20px);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  --background: #ffffff;
+  --foreground: #111827;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f172a;
+    --foreground: #f8fafc;
   }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-arabic), var(--font-latin), sans-serif;
+}
+
+[lang="ar"] body,
+[dir="rtl"] body {
+  font-family: var(--font-arabic), sans-serif;
+}
+
+[lang="fr"] body,
+[dir="ltr"] body {
+  font-family: var(--font-latin), sans-serif;
 }
 
 body {
