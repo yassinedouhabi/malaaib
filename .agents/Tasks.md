@@ -27,10 +27,10 @@ Establish the base frontend architecture.
 
 ### Fonts Setup
 
-- [ ] Install **IBM Plex Sans Arabic**
-- [ ] Install **IBM Plex Mono**
-- [ ] Install **Geist**
-- [ ] Configure fonts in `layout.tsx`
+- [x] Install **IBM Plex Sans Arabic**
+- [x] Install **IBM Plex Mono**
+- [x] Install **Geist**
+- [x] Configure fonts in `layout.tsx`
 
 ### RTL Configuration
 
