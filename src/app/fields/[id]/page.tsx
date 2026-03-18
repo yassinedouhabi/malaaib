@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import SlotGrid from "@/components/SlotGrid";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import SlotGrid from "@/components/SlotGrid";
 
 interface Field {
   _id: string;
@@ -72,63 +71,77 @@ export default function FieldPage() {
   if (!field) return <p>Field not found.</p>;
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold">{field.name}</h1>
-          <Badge variant="secondary">{field.type}</Badge>
+    <div className="flex flex-col gap-8 max-w-2xl">
+
+      {/* Field header */}
+      <section className="bg-muted rounded-xl px-6 py-8 flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight">{field.name}</h1>
+            <Badge variant="secondary">{field.type}</Badge>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            {field.neighborhood ? `${field.neighborhood}, ` : ""}{field.city}
+          </p>
         </div>
-        <p className="text-muted-foreground">{field.neighborhood ? `${field.neighborhood}, ` : ""}{field.city}</p>
-      </div>
 
-      {field.description && <p className="text-sm">{field.description}</p>}
-
-      <div className="flex gap-4 text-sm">
-        <span className="font-medium">{field.pricePerHour} MAD / hr</span>
-        <span className="text-muted-foreground">{field.slotDuration} min slots</span>
-      </div>
-
-      {field.amenities.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {field.amenities.map((a) => (
-            <Badge key={a} variant="outline">{a}</Badge>
-          ))}
-        </div>
-      )}
-
-      <Separator />
-
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="date">Select Date</Label>
-          <Input
-            id="date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            min={new Date().toISOString().split("T")[0]}
-            className="w-48"
-          />
-        </div>
-        <h3 className="font-medium">Available Slots</h3>
-        {loadingSlots ? (
-          <p className="text-sm text-muted-foreground">Loading slots...</p>
-        ) : (
-          <SlotGrid slots={slots} selected={selectedSlot} onSelect={setSelectedSlot} />
+        {field.description && (
+          <p className="text-sm text-muted-foreground">{field.description}</p>
         )}
-      </div>
 
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-bold">{field.pricePerHour}</span>
+          <span className="text-sm text-muted-foreground">MAD / hr · {field.slotDuration} min slots</span>
+        </div>
+
+        {field.amenities.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {field.amenities.map((a) => (
+              <Badge key={a} variant="outline">{a}</Badge>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Slot picker */}
+      <Card>
+        <CardContent className="pt-6 flex flex-col gap-6">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="date">Select Date</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
+              className="w-48"
+            />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <h3 className="font-semibold">Available Slots</h3>
+            {loadingSlots ? (
+              <p className="text-sm text-muted-foreground">Loading slots...</p>
+            ) : (
+              <SlotGrid slots={slots} selected={selectedSlot} onSelect={setSelectedSlot} />
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Selected slot CTA */}
       {selectedSlot && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Selected Slot</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <span className="text-sm">{date} — {selectedSlot.startTime} to {selectedSlot.endTime}</span>
-            <Button onClick={goToCheckout} size="sm">Book Now</Button>
+        <Card className="bg-muted border-0">
+          <CardContent className="pt-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold">{date}</p>
+              <p className="text-sm text-muted-foreground">{selectedSlot.startTime} – {selectedSlot.endTime}</p>
+            </div>
+            <Button onClick={goToCheckout}>Book Now</Button>
           </CardContent>
         </Card>
       )}
+
     </div>
   );
 }

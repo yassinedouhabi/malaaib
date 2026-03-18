@@ -9,7 +9,7 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useDomain } from "@/lib/domain-context";
 
 const schema = z.object({
@@ -55,50 +55,76 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex justify-center pt-10">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>{isPro ? "Owner Login" : "Login"}</CardTitle>
-          {isPro && <CardDescription>Sign in to manage your fields</CardDescription>}
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register("email")} />
-              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  className="pr-16"
-                  {...register("password")}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2"
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </Button>
+    <div className="flex min-h-[75vh] items-center justify-center py-12">
+      <div className="flex flex-col gap-6 w-full max-w-sm">
+
+        {/* Header */}
+        <div className="text-center flex flex-col gap-1">
+          <h1 className="text-2xl font-bold tracking-tight">
+            {isPro ? "Owner Login" : "Welcome back"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {isPro ? "Sign in to manage your fields" : "Sign in to your account to continue"}
+          </p>
+        </div>
+
+        {/* Form */}
+        <Card className="shadow-sm">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" autoComplete="email" {...register("email")} />
+                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
               </div>
-              {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
-            </div>
-            {serverError && <p className="text-sm text-destructive">{serverError}</p>}
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Logging in..." : "Login"}
-            </Button>
-            <p className="text-sm text-center text-muted-foreground">
-              No account? <Link href="/register" className="underline">Register</Link>
-            </p>
-          </form>
-        </CardContent>
-      </Card>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    className="pr-16"
+                    autoComplete="current-password"
+                    {...register("password")}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs"
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </Button>
+                </div>
+                {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+              </div>
+
+              {serverError && (
+                <div className="rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+                  {serverError}
+                </div>
+              )}
+
+              <Button type="submit" disabled={isSubmitting} className="w-full mt-1">
+                {isSubmitting ? "Signing in..." : "Sign in"}
+              </Button>
+
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Footer link */}
+        <p className="text-sm text-center text-muted-foreground">
+          No account?{" "}
+          <Link href="/register" className="text-foreground underline underline-offset-4 hover:text-foreground/80">
+            Create one
+          </Link>
+        </p>
+
+      </div>
     </div>
   );
 }

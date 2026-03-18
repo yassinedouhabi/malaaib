@@ -37,7 +37,6 @@ function CheckoutContent() {
     if (fieldId) {
       fetch(`/api/fields/${fieldId}`).then((r) => r.json()).then((d) => setField(d.field));
     }
-    // Try to pre-fill from logged-in user profile (cookie sent automatically)
     fetch("/api/user/profile")
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.user) setProfile(d.user); });
@@ -61,31 +60,48 @@ function CheckoutContent() {
   }
 
   if (!fieldId || !date || !startTime || !endTime) {
-    return <p>Invalid checkout state. Please go back and select a slot.</p>;
+    return <p className="text-muted-foreground">Invalid checkout state. Please go back and select a slot.</p>;
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-lg">
-      <h1 className="text-2xl font-bold">Checkout</h1>
-      {field && (
-        <BookingSummary
-          fieldName={field.name}
-          city={field.city}
-          date={date}
-          startTime={startTime}
-          endTime={endTime}
-          pricePerHour={field.pricePerHour}
-          slotDuration={field.slotDuration}
-        />
-      )}
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      <BookingForm
-        defaultName={profile?.name}
-        defaultPhone={profile?.phone}
-        defaultEmail={profile?.email}
-        onSubmit={handleSubmit}
-        loading={loading}
-      />
+    <div className="flex flex-col gap-8">
+
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Complete your booking</h1>
+        <p className="text-sm text-muted-foreground mt-1">Review your slot and enter your details to confirm.</p>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-8 items-start">
+        <div className="w-full lg:w-72 shrink-0">
+          {field && (
+            <BookingSummary
+              fieldName={field.name}
+              city={field.city}
+              date={date}
+              startTime={startTime}
+              endTime={endTime}
+              pricePerHour={field.pricePerHour}
+              slotDuration={field.slotDuration}
+            />
+          )}
+        </div>
+
+        <div className="flex-1 w-full flex flex-col gap-4">
+          {error && (
+            <div className="rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+              {error}
+            </div>
+          )}
+          <BookingForm
+            defaultName={profile?.name}
+            defaultPhone={profile?.phone}
+            defaultEmail={profile?.email}
+            onSubmit={handleSubmit}
+            loading={loading}
+          />
+        </div>
+      </div>
+
     </div>
   );
 }

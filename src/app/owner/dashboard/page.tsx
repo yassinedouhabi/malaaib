@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -31,40 +30,135 @@ interface Booking {
   status: string;
   totalPrice: number;
   clientName: string;
-  fieldId: { name: string; city: string };
+  clientPhone: string;
+  clientEmail?: string;
+  fieldId: { name: string; city: string; type: string };
 }
 
 const PREVIOUS_LIMIT = 3;
 
+function statusBadgeClass(status: string) {
+  return status === "confirmed"
+    ? "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
+    : "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800";
+}
+
 function BookingCard({
   booking,
-  onCancel,
+  onClick,
 }: {
   booking: Booking;
-  onCancel?: (id: string) => void;
+  onClick: (b: Booking) => void;
 }) {
   return (
-    <Card>
+    <Card
+      className="cursor-pointer hover:shadow-md transition-shadow"
+      onClick={() => onClick(booking)}
+    >
       <CardHeader className="pb-1">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">{booking.fieldId.name}</CardTitle>
-          <Badge variant={booking.status === "confirmed" ? "default" : "destructive"}>
+          <Badge className={statusBadgeClass(booking.status)}>
             {booking.status}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="text-sm flex items-center justify-between">
-        <div>
-          <p>{booking.clientName} — {booking.startTime} to {booking.endTime}</p>
-          <p className="text-muted-foreground">{booking.date} · {booking.totalPrice} MAD</p>
-        </div>
-        {booking.status === "confirmed" && onCancel && (
-          <Button variant="destructive" size="sm" onClick={() => onCancel(booking._id)}>
-            Cancel
-          </Button>
-        )}
+      <CardContent className="text-sm">
+        <p>{booking.clientName} · {booking.startTime} – {booking.endTime}</p>
+        <p className="text-muted-foreground">{booking.date} · {booking.totalPrice} MAD</p>
       </CardContent>
     </Card>
+  );
+}
+
+function BookingDetailsDialog({
+  booking,
+  onClose,
+  onCancel,
+  cancelling,
+}: {
+  booking: Booking | null;
+  onClose: () => void;
+  onCancel: (id: string) => void;
+  cancelling: boolean;
+}) {
+  return (
+    <Dialog open={!!booking} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {booking?.fieldId.name}
+            <Badge variant="secondary">{booking?.fieldId.type}</Badge>
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">{booking?.fieldId.city}</p>
+        </DialogHeader>
+
+        {booking && (
+          <div className="flex flex-col gap-4">
+            {/* Status */}
+            <Badge className={`${statusBadgeClass(booking.status)} w-fit`}>
+              {booking.status}
+            </Badge>
+
+            <Separator />
+
+            {/* Slot details */}
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Date</span>
+                <span className="font-medium">{booking.date}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Time</span>
+                <span className="font-medium">{booking.startTime} – {booking.endTime}</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span>Total</span>
+                <span>{booking.totalPrice} MAD</span>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Client details */}
+            <div className="flex flex-col gap-2 text-sm">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Client</p>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Name</span>
+                <span>{booking.clientName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Phone</span>
+                <a href={`tel:${booking.clientPhone}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                  {booking.clientPhone}
+                </a>
+              </div>
+              {booking.clientEmail && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Email</span>
+                  <a href={`mailto:${booking.clientEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                    {booking.clientEmail}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          {booking?.status === "confirmed" && (
+            <Button
+              variant="destructive"
+              onClick={() => onCancel(booking._id)}
+              disabled={cancelling}
+            >
+              {cancelling ? "Cancelling..." : "Cancel Booking"}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -74,7 +168,7 @@ export default function OwnerDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showAllPrevious, setShowAllPrevious] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [clearingAll, setClearingAll] = useState(false);
@@ -89,22 +183,15 @@ export default function OwnerDashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function confirmCancel() {
-    if (!confirmId) return;
+  async function handleCancel(id: string) {
     setCancelling(true);
-    const res = await fetch(`/api/owner/bookings/${confirmId}/cancel`, { method: "PATCH" });
+    const res = await fetch(`/api/owner/bookings/${id}/cancel`, { method: "PATCH" });
     if (res.ok) {
-      setBookings((prev) => prev.map((b) => (b._id === confirmId ? { ...b, status: "cancelled" } : b)));
+      setBookings((prev) => prev.map((b) => b._id === id ? { ...b, status: "cancelled" } : b));
+      setDetailBooking((prev) => prev && prev._id === id ? { ...prev, status: "cancelled" } : prev);
     }
     setCancelling(false);
-    setConfirmId(null);
   }
-
-  const visible = showCancelled ? bookings : bookings.filter((b) => b.status !== "cancelled");
-
-  const previous = visible.filter((b) => b.date < today).sort((a, b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime));
-  const todayBookings = visible.filter((b) => b.date === today);
-  const upcoming = visible.filter((b) => b.date > today).sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
 
   async function clearAll() {
     setClearingAll(true);
@@ -114,28 +201,37 @@ export default function OwnerDashboardPage() {
     setConfirmClearAll(false);
   }
 
+  const visible = showCancelled ? bookings : bookings.filter((b) => b.status !== "cancelled");
+  const previous = visible.filter((b) => b.date < today).sort((a, b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime));
+  const todayBookings = visible.filter((b) => b.date === today);
+  const upcoming = visible.filter((b) => b.date > today).sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
   const visiblePrevious = showAllPrevious ? previous : previous.slice(0, PREVIOUS_LIMIT);
-  const targetBooking = bookings.find((b) => b._id === confirmId);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <div className="flex items-center gap-3">
-          {bookings.length > 0 && (
-            <Button variant="destructive" size="sm" onClick={() => setConfirmClearAll(true)}>
-              Clear All
-            </Button>
-          )}
+    <div className="flex flex-col gap-8">
+
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Overview of your fields and bookings</p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
           {bookings.some((b) => b.status === "cancelled") && (
             <div className="flex items-center gap-2">
               <Label htmlFor="show-cancelled" className="text-sm text-muted-foreground">Show cancelled</Label>
               <Switch id="show-cancelled" checked={showCancelled} onCheckedChange={setShowCancelled} />
             </div>
           )}
+          {bookings.length > 0 && (
+            <Button variant="destructive" size="sm" onClick={() => setConfirmClearAll(true)}>
+              Clear All
+            </Button>
+          )}
         </div>
       </div>
 
+      {/* Stats */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
@@ -144,10 +240,10 @@ export default function OwnerDashboardPage() {
             { label: "Confirmed", value: stats.confirmedBookings },
             { label: "Revenue (MAD)", value: stats.revenue },
           ].map(({ label, value }) => (
-            <Card key={label}>
+            <Card key={label} className="bg-muted border-0">
               <CardContent className="pt-6">
-                <p className="text-muted-foreground text-xs">{label}</p>
-                <p className="text-2xl font-bold">{value}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+                <p className="text-3xl font-bold mt-1">{value}</p>
               </CardContent>
             </Card>
           ))}
@@ -156,49 +252,41 @@ export default function OwnerDashboardPage() {
 
       <Separator />
 
+      {/* Bookings */}
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading bookings...</p>
       ) : (
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-10">
 
-          {/* Today */}
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold">Today</h2>
             {todayBookings.length === 0 ? (
               <p className="text-sm text-muted-foreground">No bookings today.</p>
             ) : (
-              todayBookings.map((b) => (
-                <BookingCard key={b._id} booking={b} onCancel={setConfirmId} />
-              ))
+              todayBookings.map((b) => <BookingCard key={b._id} booking={b} onClick={setDetailBooking} />)
             )}
           </section>
 
           <Separator />
 
-          {/* Upcoming */}
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold">Upcoming</h2>
             {upcoming.length === 0 ? (
               <p className="text-sm text-muted-foreground">No upcoming bookings.</p>
             ) : (
-              upcoming.map((b) => (
-                <BookingCard key={b._id} booking={b} onCancel={setConfirmId} />
-              ))
+              upcoming.map((b) => <BookingCard key={b._id} booking={b} onClick={setDetailBooking} />)
             )}
           </section>
 
           <Separator />
 
-          {/* Previous */}
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold">Previous</h2>
             {previous.length === 0 ? (
               <p className="text-sm text-muted-foreground">No previous bookings.</p>
             ) : (
               <>
-                {visiblePrevious.map((b) => (
-                  <BookingCard key={b._id} booking={b} />
-                ))}
+                {visiblePrevious.map((b) => <BookingCard key={b._id} booking={b} onClick={setDetailBooking} />)}
                 {previous.length > PREVIOUS_LIMIT && (
                   <Button
                     variant="ghost"
@@ -216,14 +304,23 @@ export default function OwnerDashboardPage() {
         </div>
       )}
 
+      {/* Booking details dialog */}
+      <BookingDetailsDialog
+        booking={detailBooking}
+        onClose={() => setDetailBooking(null)}
+        onCancel={handleCancel}
+        cancelling={cancelling}
+      />
+
+      {/* Clear all dialog */}
       <Dialog open={confirmClearAll} onOpenChange={(open) => { if (!open) setConfirmClearAll(false); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Clear all bookings</DialogTitle>
-            <DialogDescription>
-              This will permanently delete all bookings from the database. This cannot be undone.
-            </DialogDescription>
           </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will permanently delete all bookings. This cannot be undone.
+          </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmClearAll(false)}>Cancel</Button>
             <Button variant="destructive" onClick={clearAll} disabled={clearingAll}>
@@ -233,26 +330,6 @@ export default function OwnerDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!confirmId} onOpenChange={(open) => { if (!open) setConfirmId(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancel booking</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel the booking for{" "}
-              <span className="font-medium text-foreground">{targetBooking?.clientName}</span> on{" "}
-              <span className="font-medium text-foreground">{targetBooking?.fieldId.name}</span> at{" "}
-              <span className="font-medium text-foreground">{targetBooking?.startTime} – {targetBooking?.endTime}</span>?
-              This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmId(null)}>Keep</Button>
-            <Button variant="destructive" onClick={confirmCancel} disabled={cancelling}>
-              {cancelling ? "Cancelling..." : "Cancel Booking"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

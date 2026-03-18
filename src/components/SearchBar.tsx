@@ -24,6 +24,7 @@ export default function SearchBar({ defaultCity = "", defaultDate = "", defaultT
   const [city, setCity] = useState(defaultCity);
   const [date, setDate] = useState(defaultDate || new Date().toISOString().split("T")[0]);
   const [type, setType] = useState(defaultType);
+  const [locating, setLocating] = useState(false);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -34,9 +35,27 @@ export default function SearchBar({ defaultCity = "", defaultDate = "", defaultT
     router.push(`/search?${params.toString()}`);
   }
 
+  function handleNearMe() {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const params = new URLSearchParams();
+        params.set("lat", String(pos.coords.latitude));
+        params.set("lng", String(pos.coords.longitude));
+        params.set("radius", "10");
+        if (date) params.set("date", date);
+        if (type && type !== "all") params.set("type", type);
+        router.push(`/search?${params.toString()}`);
+        setLocating(false);
+      },
+      () => setLocating(false)
+    );
+  }
+
   return (
-    <form onSubmit={handleSearch} className="flex flex-col gap-4 sm:flex-row sm:items-end">
-      <div className="flex flex-col gap-1.5 flex-1">
+    <form onSubmit={handleSearch} className="flex flex-col gap-4 sm:flex-row sm:items-end sm:flex-wrap">
+      <div className="flex flex-col gap-1.5 flex-1 min-w-36">
         <Label htmlFor="city">City</Label>
         <Input
           id="city"
@@ -57,7 +76,7 @@ export default function SearchBar({ defaultCity = "", defaultDate = "", defaultT
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="type">Type</Label>
-        <Select value={type || "all"} onValueChange={(v: string | null) => setType(v === "all" || !v ? "" : v)}>
+        <Select value={type || "all"} onValueChange={(v) => setType(v === "all" ? "" : v)}>
           <SelectTrigger id="type" className="w-32">
             <SelectValue placeholder="Any" />
           </SelectTrigger>
@@ -70,7 +89,12 @@ export default function SearchBar({ defaultCity = "", defaultDate = "", defaultT
           </SelectContent>
         </Select>
       </div>
-      <Button type="submit">Search</Button>
+      <div className="flex gap-2">
+        <Button type="submit">Search</Button>
+        <Button type="button" variant="outline" onClick={handleNearMe} disabled={locating}>
+          {locating ? "Locating..." : "Near me"}
+        </Button>
+      </div>
     </form>
   );
 }

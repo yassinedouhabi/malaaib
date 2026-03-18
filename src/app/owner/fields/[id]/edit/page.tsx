@@ -11,6 +11,7 @@ interface FieldData {
   city: string;
   neighborhood: string;
   address: string;
+  location?: { lat: number; lng: number };
   pricePerHour: number;
   slotDuration: number;
   amenities: string[];

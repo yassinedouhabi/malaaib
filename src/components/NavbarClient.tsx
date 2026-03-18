@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -44,6 +45,7 @@ export default function NavbarClient({ role, isPro }: NavbarClientProps) {
         </a>
 
         <nav className="flex items-center gap-2">
+          <ThemeToggle />
           {!role && (
             <>
               <Link href="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>Login</Link>

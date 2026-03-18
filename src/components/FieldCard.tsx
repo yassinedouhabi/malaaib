@@ -16,6 +16,7 @@ interface FieldCardProps {
     pricePerHour: number;
     amenities: string[];
     slotDuration: number;
+    distance?: number;
   };
   date?: string;
 }
@@ -36,7 +37,12 @@ export default function FieldCard({ field, date }: FieldCardProps) {
       <CardContent className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">{field.pricePerHour} MAD / hr</span>
-          <span className="text-xs text-muted-foreground">{field.slotDuration} min slots</span>
+          <div className="flex items-center gap-2">
+            {field.distance !== undefined && (
+              <span className="text-xs text-muted-foreground">{field.distance < 1 ? `${Math.round(field.distance * 1000)}m` : `${field.distance.toFixed(1)}km`}</span>
+            )}
+            <span className="text-xs text-muted-foreground">{field.slotDuration} min slots</span>
+          </div>
         </div>
         {field.amenities.length > 0 && (
           <div className="flex flex-wrap gap-1">

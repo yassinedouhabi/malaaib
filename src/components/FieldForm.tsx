@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import dynamic from "next/dynamic";
+
+const LocationPicker = dynamic(() => import("@/components/LocationPicker"), { ssr: false });
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const AMENITIES = ["parking", "lighting", "changing rooms", "water"];
@@ -27,6 +30,7 @@ interface FieldData {
   city: string;
   neighborhood: string;
   address: string;
+  location?: { lat: number; lng: number };
   pricePerHour: number;
   slotDuration: number;
   amenities: string[];
@@ -46,6 +50,7 @@ const DEFAULT: FieldData = {
   city: "",
   neighborhood: "",
   address: "",
+  location: undefined,
   pricePerHour: 100,
   slotDuration: 60,
   amenities: [],
@@ -150,6 +155,13 @@ export default function FieldForm({ initial, onSubmit, loading }: FieldFormProps
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label htmlFor="address">Address <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <Input id="address" value={form.address} onChange={(e) => set("address", e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label>Pin on map <span className="text-muted-foreground font-normal">(optional — helps users find you)</span></Label>
+            <LocationPicker
+              value={form.location}
+              onChange={(loc) => set("location", loc ?? undefined)}
+            />
           </div>
         </CardContent>
       </Card>

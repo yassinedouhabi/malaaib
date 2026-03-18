@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,44 @@ interface Booking {
   status: string;
   totalPrice: number;
   fieldId: { name: string; city: string; type: string };
+}
+
+function BookingCard({
+  booking,
+  canCancel,
+  onCancel,
+}: {
+  booking: Booking;
+  canCancel: boolean;
+  onCancel: (id: string) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">{booking.fieldId.name}</CardTitle>
+          <Badge className={booking.status === "confirmed"
+            ? "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
+            : "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+          }>
+            {booking.status}
+          </Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">{booking.fieldId.city} — {booking.fieldId.type}</p>
+      </CardHeader>
+      <CardContent className="text-sm flex items-center justify-between">
+        <div>
+          <p>{booking.date} · {booking.startTime} – {booking.endTime}</p>
+          <p className="text-muted-foreground">{booking.totalPrice} MAD</p>
+        </div>
+        {canCancel && (
+          <Button variant="destructive" size="sm" onClick={() => onCancel(booking._id)}>
+            Cancel
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function MyBookingsPage() {
@@ -61,56 +100,73 @@ export default function MyBookingsPage() {
   }
 
   const targetBooking = bookings.find((b) => b._id === confirmId);
+  const upcoming = bookings.filter((b) => b.date >= today && b.status === "confirmed").sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+  const past = bookings.filter((b) => b.date < today || b.status !== "confirmed").sort((a, b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime));
 
   if (loading) return <p className="text-muted-foreground">Loading...</p>;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
+
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">My Bookings</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">My Bookings</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {bookings.length === 0 ? "No bookings yet" : `${bookings.length} booking${bookings.length !== 1 ? "s" : ""} total`}
+          </p>
+        </div>
         {bookings.length > 0 && (
           <Button variant="destructive" size="sm" onClick={() => setConfirmClearAll(true)}>
             Clear All
           </Button>
         )}
       </div>
+
       {bookings.length === 0 && (
-        <p className="text-muted-foreground">No bookings yet. <Link href="/" className="underline">Find a field</Link>.</p>
+        <Card className="bg-muted border-0">
+          <CardContent className="pt-6 flex flex-col gap-2">
+            <p className="font-medium">No bookings yet</p>
+            <p className="text-sm text-muted-foreground">
+              <Link href="/" className="underline underline-offset-4">Find a field</Link> and book your first slot.
+            </p>
+          </CardContent>
+        </Card>
       )}
-      <div className="flex flex-col gap-4">
-        {bookings.map((b) => {
-          const canCancel = b.status === "confirmed" && b.date >= today;
-          return (
-            <Card key={b._id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{b.fieldId.name}</CardTitle>
-                  <Badge variant={b.status === "confirmed" ? "default" : "destructive"}>{b.status}</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">{b.fieldId.city} — {b.fieldId.type}</p>
-              </CardHeader>
-              <CardContent className="text-sm flex items-center justify-between">
-                <div>
-                  <p>{b.date} — {b.startTime} to {b.endTime}</p>
-                  <p className="text-muted-foreground">{b.totalPrice} MAD</p>
-                </div>
-                {canCancel && (
-                  <Button variant="destructive" size="sm" onClick={() => setConfirmId(b._id)}>
-                    Cancel
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+
+      {/* Upcoming */}
+      {upcoming.length > 0 && (
+        <section className="flex flex-col gap-4">
+          <h2 className="font-semibold text-base">Upcoming</h2>
+          {upcoming.map((b) => (
+            <BookingCard
+              key={b._id}
+              booking={b}
+              canCancel={true}
+              onCancel={setConfirmId}
+            />
+          ))}
+        </section>
+      )}
+
+      {upcoming.length > 0 && past.length > 0 && <Separator />}
+
+      {/* Past & cancelled */}
+      {past.length > 0 && (
+        <section className="flex flex-col gap-4">
+          <h2 className="font-semibold text-base">Past & Cancelled</h2>
+          {past.map((b) => (
+            <BookingCard key={b._id} booking={b} canCancel={false} onCancel={setConfirmId} />
+          ))}
+        </section>
+      )}
 
       <Dialog open={confirmClearAll} onOpenChange={(open) => { if (!open) setConfirmClearAll(false); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Clear all bookings</DialogTitle>
             <DialogDescription>
-              This will permanently delete all your bookings from the database. This cannot be undone.
+              This will permanently delete all your bookings. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -142,6 +198,7 @@ export default function MyBookingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

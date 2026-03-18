@@ -70,44 +70,65 @@ export default function OwnerFieldsPage() {
   if (loading) return <p className="text-muted-foreground">Loading...</p>;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
+
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">My Fields</h1>
-        <Link href="/owner/fields/new" className={buttonVariants({ size: "sm" })}>Add Field</Link>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">My Fields</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {fields.length === 0 ? "No fields yet" : `${fields.length} field${fields.length !== 1 ? "s" : ""}`}
+          </p>
+        </div>
+        <Link href="/owner/fields/new" className={buttonVariants({ size: "sm" })}>
+          Add Field
+        </Link>
       </div>
 
-      {fields.length === 0 && (
-        <p className="text-muted-foreground">No fields yet. <Link href="/owner/fields/new" className="underline">Add your first field</Link>.</p>
-      )}
-
-      <div className="grid sm:grid-cols-2 gap-4">
-        {fields.map((f) => (
-          <Card key={f._id}>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{f.name}</CardTitle>
-                <div className="flex gap-1">
-                  <Badge variant="secondary">{f.type}</Badge>
-                  {!f.isActive && <Badge variant="destructive">Inactive</Badge>}
+      {fields.length === 0 ? (
+        <Card className="bg-muted border-0">
+          <CardContent className="pt-6 flex flex-col gap-2">
+            <p className="font-medium">No fields yet</p>
+            <p className="text-sm text-muted-foreground">
+              <Link href="/owner/fields/new" className="underline underline-offset-4">Add your first field</Link> to start accepting bookings.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-4">
+          {fields.map((f) => (
+            <Card key={f._id}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">{f.name}</CardTitle>
+                  <div className="flex gap-1">
+                    <Badge variant="secondary">{f.type}</Badge>
+                    {f.isActive
+                      ? <Badge className="bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">Active</Badge>
+                      : <Badge className="bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">Inactive</Badge>
+                    }
+                  </div>
                 </div>
-              </div>
-              <p className="text-sm text-muted-foreground">{f.city} — {f.pricePerHour} MAD/hr</p>
-            </CardHeader>
-            <CardContent className="flex gap-2">
-              <Link href={`/owner/fields/${f._id}/edit`} className={buttonVariants({ variant: "outline", size: "sm" })}>Edit</Link>
-              {f.isActive ? (
-                <Button variant="destructive" size="sm" onClick={() => setConfirmDeactivateId(f._id)}>
-                  Deactivate
-                </Button>
-              ) : (
-                <Button size="sm" onClick={() => setConfirmReactivateId(f._id)}>
-                  Reactivate
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <p className="text-sm text-muted-foreground">{f.city} · {f.pricePerHour} MAD/hr</p>
+              </CardHeader>
+              <CardContent className="flex gap-2">
+                <Link href={`/owner/fields/${f._id}/edit`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  Edit
+                </Link>
+                {f.isActive ? (
+                  <Button variant="destructive" size="sm" onClick={() => setConfirmDeactivateId(f._id)}>
+                    Deactivate
+                  </Button>
+                ) : (
+                  <Button size="sm" onClick={() => setConfirmReactivateId(f._id)}>
+                    Reactivate
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Dialog open={!!confirmDeactivateId} onOpenChange={(open) => { if (!open) setConfirmDeactivateId(null); }}>
         <DialogContent>
@@ -142,6 +163,7 @@ export default function OwnerFieldsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }
